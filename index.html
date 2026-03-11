@@ -1,85 +1,214 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Email Test</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR Chat - Email Sender</title>
 
 <style>
-body{
-font-family: Arial;
-background:#f4f4f4;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f3f4f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
 
-.box{
-background:white;
-padding:30px;
-border-radius:10px;
-width:320px;
-box-shadow:0 0 10px rgba(0,0,0,0.1);
-}
+  .box {
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
 
-input, textarea{
-width:100%;
-padding:10px;
-margin:8px 0;
-}
+  h2 {
+    margin-top: 0;
+    color: #111827;
+    text-align: center;
+    font-size: 24px;
+  }
 
-button{
-padding:10px;
-width:100%;
-background:#0070f3;
-color:white;
-border:none;
-cursor:pointer;
-}
+  label {
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  button {
+    margin-top: 24px;
+    padding: 12px;
+    width: 100%;
+    background: #0070f3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  button:hover {
+    background: #005bb5;
+  }
+
+  button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  #status {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 20px;
+  }
+  
+  .success { color: #059669; }
+  .error { color: #dc2626; }
+
+  /* Hidden utility class */
+  .hidden { display: none; }
 </style>
 </head>
 
 <body>
 
 <div class="box">
+  <h2>Send AR Chat Emails</h2>
 
-<h2>Email Test</h2>
+  <label for="template">Email Template</label>
+  <select id="template" onchange="handleTemplateChange()">
+    <option value="otp_simple">Simple OTP Verification</option>
+    <option value="otp_fancy">Fancy OTP (with Logo)</option>
+    <option value="password_reset">Password Reset</option>
+    <option value="support_reply">Support Reply / Problem</option>
+    <option value="custom">Custom Plain Message</option>
+  </select>
 
-<input id="email" placeholder="Receiver Email">
-<input id="subject" placeholder="Subject">
-<textarea id="message" placeholder="Message"></textarea>
+  <label for="email">Receiver Email</label>
+  <input type="email" id="email" placeholder="user@example.com" required>
 
-<button onclick="sendEmail()">Send Email</button>
+  <label for="subject">Subject</label>
+  <input type="text" id="subject" value="Verify your email for AR Chat" required>
 
-<p id="status"></p>
+  <!-- Dynamic Fields -->
+  <div id="otp-container">
+    <label for="otp">Verification Code (OTP)</label>
+    <input type="text" id="otp" placeholder="123456">
+  </div>
 
+  <div id="message-container" class="hidden">
+    <label for="message">Custom Message / Support Reply</label>
+    <textarea id="message" placeholder="Type your message here..."></textarea>
+  </div>
+
+  <button id="sendBtn" onclick="sendEmail()">Send Email</button>
+
+  <p id="status"></p>
 </div>
 
 <script>
+  // Generate a random 6-digit OTP on load to save time testing
+  document.getElementById('otp').value = Math.floor(100000 + Math.random() * 900000);
 
-async function sendEmail(){
+  function handleTemplateChange() {
+    const template = document.getElementById("template").value;
+    const otpContainer = document.getElementById("otp-container");
+    const messageContainer = document.getElementById("message-container");
+    const subjectInput = document.getElementById("subject");
 
-const email=document.getElementById("email").value;
-const subject=document.getElementById("subject").value;
-const message=document.getElementById("message").value;
+    // Adjust visibility based on selected template
+    if (template === "otp_simple" || template === "otp_fancy") {
+      otpContainer.classList.remove("hidden");
+      messageContainer.classList.add("hidden");
+      subjectInput.value = "Verify your email for AR Chat";
+    } else if (template === "password_reset") {
+      otpContainer.classList.add("hidden");
+      messageContainer.classList.add("hidden"); // Password reset uses fixed text in template
+      subjectInput.value = "Reset your AR Chat password";
+    } else {
+      otpContainer.classList.add("hidden");
+      messageContainer.classList.remove("hidden");
+      subjectInput.value = template === "support_reply" ? "Update on your AR Chat support request" : "New Message from AR Chat";
+    }
+  }
 
-const res = await fetch("/api/sendEmail",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-email,
-subject,
-message
-})
-});
+  async function sendEmail() {
+    const btn = document.getElementById("sendBtn");
+    const statusText = document.getElementById("status");
+    
+    const email = document.getElementById("email").value;
+    const subject = document.getElementById("subject").value;
+    const templateType = document.getElementById("template").value;
+    const otp = document.getElementById("otp").value;
+    const message = document.getElementById("message").value;
 
-const data = await res.json();
+    if (!email || !subject) {
+      statusText.className = "error";
+      statusText.innerText = "Email and Subject are required!";
+      return;
+    }
 
-document.getElementById("status").innerText=data.message || data.error;
+    btn.disabled = true;
+    btn.innerText = "Sending...";
+    statusText.innerText = "";
 
-}
+    try {
+      const res = await fetch("/api/sendEmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, subject, templateType, otp, message })
+      });
 
+      const data = await res.json();
+
+      if (res.ok) {
+        statusText.className = "success";
+        statusText.innerText = data.message || "Email sent successfully!";
+      } else {
+        statusText.className = "error";
+        statusText.innerText = data.error || "Failed to send email.";
+      }
+    } catch (error) {
+      statusText.className = "error";
+      statusText.innerText = "Network error occurred.";
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "Send Email";
+    }
+  }
 </script>
 
 </body>
